@@ -48,11 +48,15 @@ def insert_data_to_sql():
             'Driver={ODBC Driver 17 for SQL Server};'  # <<< MODIFIED: USING MODERN DRIVER
             # If you installed ODBC Driver 18, use 'Driver={ODBC Driver 18 for SQL Server};'
             # If you don't have 17 or 18, you MUST install one. Fallback to {SQL Server} is last resort.
-            'Server=POWERBI-1\\IT_JOBS;'
+            # 'Server=POWERBI-1\\IT_JOBS;'
+            # 'Database=IT_JOBS;'
+            # 'UID=sa;'
+            # 'PWD=maab2024;'
+            # 'Connection Timeout=30;'
+            'Driver={SQL Server};'
+            'Server=WIN-LORQJU2719N;'
             'Database=IT_JOBS;'
-            'UID=sa;'
-            'PWD=maab2024;'
-            'Connection Timeout=30;'
+            'Trusted_Connection=yes;'
         )
         cursor = conn.cursor()
         print("✅ Connected.")
