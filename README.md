@@ -9,6 +9,7 @@ A powerful and flexible web scraping system for collecting structured data from 
 - 🔹 [LinkedIn](https://www.linkedin.com) *(in progress)*
 - 🔹 [Indeed](https://www.indeed.com)
 
+
 ---
 
 ## 🚀 Features
