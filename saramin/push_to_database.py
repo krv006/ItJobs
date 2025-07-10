@@ -24,7 +24,6 @@ def insert_data_to_sql():
             'Database=IT_JOBS;'
             'Trusted_Connection=yes;'
         )
-
         cursor = conn.cursor()
 
         print("🗃 Jadval tekshirilmoqda...")
@@ -50,6 +49,7 @@ def insert_data_to_sql():
         conn.commit()
 
         print("📥 Ma’lumotlar bazaga yozilmoqda...")
+
         insert_query = """
             INSERT INTO JobListings (
                 ID, Posted_date, Job_Title_from_List, Job_Title, Company, Company_Logo_URL,
@@ -59,23 +59,27 @@ def insert_data_to_sql():
 
         for i, row in final_dataframe.iterrows():
             try:
+                # ID ni xavfsiz int ga aylantirish (agar bo‘sh bo‘lsa, 0 beriladi)
+                row_id = int(row['ID']) if str(row['ID']).isdigit() else 0
+
                 cursor.execute(insert_query,
-                               int(row['ID']),
-                               row['Posted_date'],
-                               row['Job Title from List'],
-                               row['Job Title'],
-                               row['Company'],
-                               row['Company Logo URL'],
-                               row['Country'],
-                               row['Location'],
-                               row['Skills'],
-                               row['Salary Info'],
-                               row['Source']
-                               )
+                               row_id,
+                               row.get('Posted_date', 'N/A'),
+                               row.get('Job Title from List', 'N/A'),
+                               row.get('Job Title', 'N/A'),
+                               row.get('Company', 'N/A'),
+                               row.get('Company Logo URL', 'N/A'),
+                               row.get('Country', 'N/A'),
+                               row.get('Location', 'N/A'),
+                               row.get('Skills', 'N/A'),
+                               row.get('Salary Info', 'N/A'),
+                               row.get('Source', 'N/A'))
+
+                conn.commit()  # Har bir muvaffaqiyatli yozuvdan keyin commit
+
             except Exception as e:
                 print(f"⚠️ Row {i} insert qilinmadi: {e}")
 
-        conn.commit()
         cursor.close()
         conn.close()
 
