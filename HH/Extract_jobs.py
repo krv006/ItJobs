@@ -17,6 +17,7 @@ from clean_and_take_date_and_location import extract_date
 from clean_company_name import transliterate_company_name
 from salary_identify import extract_salary
 from take_location import extract_location
+from push_to_data_base import insert_data_to_sql
 
 
 class Extract:
@@ -138,7 +139,8 @@ class Extract:
         # This now uses the correctly defined 'Company_Logo_URL_path'
         company_logo_url = self.__get_attribute_or_nan(Company_Logo_URL_path, 'src')
         self.company_logo_urls.append(company_logo_url)
-        print(f" ✅ Logo URL: {company_logo_url}" if company_logo_url != 'N/A' else f" ⚠️ Logo URL not found.")
+        # print(f" ✅ Logo URL: {company_logo_url}" if company_logo_url != 'N/A' else f" ⚠️ Logo URL not found.")
+        insert_data_to_sql(job_id,company_name,job_title,post_date,location,technical_skills,salary,company_logo_url)
 
     def __get_text_or_nan(self, path):
         try:
