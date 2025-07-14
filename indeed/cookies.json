@@ -1,0 +1,20 @@
+[
+  {
+    "name": "CTK",
+    "value": "sizning_ctk_kuki",
+    "domain": ".indeed.com",
+    "path": "/"
+  },
+  {
+    "name": "INDEED_CSRF_TOKEN",
+    "value": "sizning_csrf_token",
+    "domain": ".indeed.com",
+    "path": "/"
+  },
+  {
+    "name": "SID",
+    "value": "sizning_sid_kuki",
+    "domain": ".indeed.com",
+    "path": "/"
+  }
+]
