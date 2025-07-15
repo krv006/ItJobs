@@ -1,11 +1,11 @@
 import json
 import time
-import pandas as pd
+
 import pyodbc
 import undetected_chromedriver as uc
+from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchWindowException, NoSuchElementException
 
 
 def create_driver(headless=False):
@@ -89,7 +89,7 @@ def save_to_database(job_id, job_title, location, skills, salary, education, job
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         cursor.execute(insert_query, (
-        job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source,))
+            job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source,))
         conn.commit()
     except:
         pass
