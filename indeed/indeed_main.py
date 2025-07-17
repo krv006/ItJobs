@@ -1,12 +1,13 @@
 import json
 import time
-
+import os
 import pyodbc
 import undetected_chromedriver as uc
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
+COOKIES_FILE = "indeed_cookies.json"
 
 def create_driver(headless=False):
     options = uc.ChromeOptions()
@@ -14,35 +15,63 @@ def create_driver(headless=False):
         options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("start-maximized")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+    # options.add_argument("start-maximized")
+    # options.add_argument(
+    #     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    # )
     driver = uc.Chrome(options=options, version_main=137)
     return driver
 
+def load_cookies(driver):
+    if os.path.exists(COOKIES_FILE):
+        with open(COOKIES_FILE, "r") as f:
+            cookies = json.load(f)
+        for cookie in cookies:
+            if 'expiry' in cookie:
+                cookie['expiry'] = int(cookie['expiry'])
+            try:
+                driver.add_cookie(cookie)
+            except:
+                continue
+        print("Cookies loaded.")
+        return True
+    return False
+
+def save_cookies(driver):
+    with open(COOKIES_FILE, "w") as f:
+        json.dump(driver.get_cookies(), f)
+    print("Cookies saved.")
 
 def login(driver):
-    print("Logging into Indeed using Google...")
-
-    driver.find_element(By.XPATH, "//a[contains(text(), 'Sign in')]").click()
+    print("Attempting to reuse cookies...")
+    driver.get("https://www.indeed.com/")
     time.sleep(3)
 
-    with open("credentials.json", "r") as file:
-        creds = json.load(file)
+    if load_cookies(driver):
+        driver.refresh()
+        time.sleep(3)
+        if "Sign in" not in driver.page_source:
+            print("Logged in via cookies.")
+            return True
+        else:
+            print("Cookies invalid, trying full login...")
 
-    email = creds['email']
-    password = creds['password']
+    print("Logging into Indeed using Google...")
 
     try:
+        driver.find_element(By.XPATH, "//a[contains(text(), 'Sign in')]").click()
+        time.sleep(3)
+
+        with open("credentials.json", "r") as file:
+            creds = json.load(file)
+
+        email = creds['email']
+        password = creds['password']
+
         google_button = driver.find_element(By.ID, "login-google-button")
         google_button.click()
         time.sleep(5)
-    except Exception as e:
-        print("Google login button not found.")
-        return False
 
-    # Handle possible new window
-    try:
         windows = driver.window_handles
         if len(windows) > 1:
             driver.switch_to.window(windows[-1])
@@ -50,7 +79,6 @@ def login(driver):
             print("Google login window did not open.")
             return False
 
-        # Login form
         email_input = driver.find_element(By.XPATH, "//input[@type='email']")
         email_input.send_keys(email)
         email_input.send_keys(Keys.ENTER)
@@ -61,7 +89,10 @@ def login(driver):
         password_input.send_keys(Keys.ENTER)
         time.sleep(5)
 
-        driver.switch_to.window(driver.window_handles[0])  # Back to Indeed
+        driver.switch_to.window(driver.window_handles[0])
+        time.sleep(3)
+
+        save_cookies(driver)
         return True
 
     except NoSuchWindowException:
@@ -70,7 +101,6 @@ def login(driver):
     except Exception as e:
         print(f"Error during login: {e}")
         return False
-
 
 def save_to_database(job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source):
     try:
@@ -97,20 +127,8 @@ def save_to_database(job_id, job_title, location, skills, salary, education, job
     except:
         pass
 
-
 def scrape_jobs(driver, base_url):
     driver.get(base_url)
-    data = {
-        "job_title": [],
-        "location": [],
-        "skills": [],
-        "salary": [],
-        "education": [],
-        "job_type": [],
-        "company_name": [],
-        "job_url": [],
-        # "job_description": []
-    }
     time.sleep(10)
     while True:
         time.sleep(2)
@@ -118,7 +136,6 @@ def scrape_jobs(driver, base_url):
             By.XPATH, "//li")
 
         for job in jobs:
-            # job.click()
             try:
                 tt = job.find_element(By.XPATH, ".//a[contains(@class, 'jcs-JobTitle')]")
                 tt.click()
@@ -126,25 +143,22 @@ def scrape_jobs(driver, base_url):
             except:
                 continue
             time.sleep(1)
-            # location
+
             try:
                 location = job.find_element(By.XPATH, "//div[@data-testid='inlineHeader-companyLocation']").text
             except:
                 location = ""
-            # salary
+
             try:
-                salary = driver.find_element(By.XPATH, "//div[contains(@aria-label, 'Pay')]").text.replace("Pay",
-                                                                                                           "").strip()
+                salary = driver.find_element(By.XPATH, "//div[contains(@aria-label, 'Pay')]").text.replace("Pay", "").strip()
             except:
                 salary = ""
-            # job_type
+
             try:
-                job_type = driver.find_element(By.XPATH, "//div[contains(@aria-label, 'Job type')]").text.replace(
-                    "Job type", "").strip()
+                job_type = driver.find_element(By.XPATH, "//div[contains(@aria-label, 'Job type')]").text.replace("Job type", "").strip()
             except:
                 job_type = ""
 
-            # skills
             try:
                 try:
                     driver.find_element(By.XPATH, "//button[contains(text(), '+ show more')]").click()
@@ -155,40 +169,38 @@ def scrape_jobs(driver, base_url):
                                                                                                               "//ul[contains(@class,'js-match-insights-provider')]").text
                 sks = skills.replace("Skills", "").replace("+ show more", "").replace("- show less", "").replace(
                     "(Required)", "").replace("\n", ',').replace(",,", ',').split(",")
-                skills = ','.join([sk for sk in sks if sk != '' and sk != " " and "Do you have" not in sk])
+                skills = ','.join([sk for sk in sks if sk.strip() and "Do you have" not in sk])
             except:
                 skills = ''
-            # education
+
             try:
-                education = driver.find_element(By.XPATH, "//div[@aria-label='Education']").text.replace("Education",
-                                                                                                         "").replace(
+                education = driver.find_element(By.XPATH, "//div[@aria-label='Education']").text.replace("Education", "").replace(
                     "(Required)", "").replace("\n", ",").replace(",,", ',')
                 edcs = education.split(",")
-                education = ','.join([ed for ed in edcs if ed != '' and ed != " " and "Do you have" not in ed])
+                education = ','.join([ed for ed in edcs if ed.strip() and "Do you have" not in ed])
             except:
                 education = "No Degree Required"
-            # company Name
+
             try:
-                comp_name = driver.find_element(By.XPATH,
-                                                "//div[contains(@data-testid, 'inlineHeader-companyName')]").text
+                comp_name = driver.find_element(By.XPATH, "//div[contains(@data-testid, 'inlineHeader-companyName')]").text
             except:
                 comp_name = ""
-            # company Url
+
             try:
-                comp_url = driver.find_element(By.XPATH,
-                                               "//div[contains(@data-testid, 'inlineHeader-companyName')]").find_element(
+                comp_url = driver.find_element(By.XPATH, "//div[contains(@data-testid, 'inlineHeader-companyName')]").find_element(
                     By.XPATH, "//a[contains(@class,'serp-page')]").get_attribute("href")
             except:
                 comp_url = ""
-            job_id = driver.current_url.split("vjk=")[-1].split("&")[0]
-            save_to_database(job_id, title, location, skills, salary, education, job_type, comp_name, comp_url,
-                             "indeed.com")
-        # df = pd.DataFrame(data)
-        # df['job_id'] = df['job_url'].apply(lambda url: url.split("vjk=")[-1].split("&")[0])
-        # df['source'] = ["indeed.com" for _ in range(len(df['company_name']))]
-        # df.to_csv("ruslt.csv")
-        driver.find_element(By.XPATH, "//a[@data-testid='pagination-page-next']").click()
 
+            job_id = driver.current_url.split("vjk=")[-1].split("&")[0]
+            save_to_database(job_id, title, location, skills, salary, education, job_type, comp_name, comp_url, "indeed.com")
+
+        try:
+            next_btn = driver.find_element(By.XPATH, "//a[@data-testid='pagination-page-next']")
+            next_btn.click()
+        except:
+            print("No more pages.")
+            break
 
 def main():
     driver = create_driver(headless=False)
@@ -203,12 +215,12 @@ def main():
     print("Login successful. Starting job scraping...")
     with open("jobs-list.json") as file:
         data = json.load(file)
+
     for job_n in data:
         base_url = f"https://www.indeed.com/jobs?q={job_n}&l=&sort=date&from=searchOnDesktopSerp"
         scrape_jobs(driver, base_url)
 
     driver.quit()
-
 
 if __name__ == "__main__":
     main()
