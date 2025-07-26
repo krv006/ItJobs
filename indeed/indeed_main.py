@@ -102,7 +102,7 @@ def login(driver):
         print(f"Error during login: {e}")
         return False
 
-def save_to_database(job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source):
+def save_to_database(job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source,date):
     try:
         with open("conn.json") as file:
             conn_dt = json.load(file)
@@ -118,11 +118,11 @@ def save_to_database(job_id, job_title, location, skills, salary, education, job
         cursor = conn.cursor()
         insert_query = """
         INSERT INTO indeed (
-            job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source,date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
         """
         cursor.execute(insert_query, (
-            job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source,))
+            job_id, job_title, location, skills, salary, education, job_type, company_name, job_url, source,date,))
         conn.commit()
     except:
         pass
@@ -192,8 +192,15 @@ def scrape_jobs(driver, base_url):
             except:
                 comp_url = ""
 
-            job_id = driver.current_url.split("vjk=")[-1].split("&")[0]
-            save_to_database(job_id, title, location, skills, salary, education, job_type, comp_name, comp_url, "indeed.com")
+            try:
+                desc = driver.find_element(By.XPATH, "//div[contains(@class,'jobsearch-JobComponent-description')]").text
+                date = desc.lower().replace("\n"," ").split("date:")[-1].split(" ")[0]
+            except:
+                date = ''
+            if "vjk=" in job_url:
+                job_id = job_url.split("vjk=")[-1].split("&")[0] if "vjk=" in job_url else ""
+                save_to_database(job_id, title, location, skills, salary, education, job_type, comp_name, job_url,
+                                 "indeed.com",date)
 
         try:
             next_btn = driver.find_element(By.XPATH, "//a[@data-testid='pagination-page-next']")
