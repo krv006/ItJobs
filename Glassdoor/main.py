@@ -186,7 +186,7 @@ class GlassdoorScraper:
         #     f.write(f"{job_title},{company},{posted_ago},{salary}\n")
 
 if __name__ == "__main__":
-    with open("listings of jobs.json","r") as file:
+    with open("jobs_list.json","r") as file:
         jobs = json.load(file)
     for job in jobs:
         GlassdoorScraper(job, "United States")
